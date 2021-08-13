@@ -1,65 +1,51 @@
-import java.io.*;
+import java.io.PrintWriter;
 import java.net.*;
-import java.util.*;
+import java.util.ArrayList;
 public class Server {
-    public static ArrayList<PrintWriter> al = new ArrayList<>();
+    public static MessageQueue<String> q = new MessageQueue<>();
+    public static ArrayList<PrintWriter> noslist = new ArrayList<>();
     public static void main(String[] args) throws Exception {
         System.out.println("Server signing On");
         ServerSocket ss = new ServerSocket(9081);
-        for (int i = 0; i < 10; i++) {
+        MessageDispatcher md = new MessageDispatcher();
+        md.setDaemon(true);
+        md.start();
+        for (int i = 0; i < 10; i++)
+        {
             Socket soc = ss.accept();
+            System.out.println("Connection established");
             Conversation c = new Conversation(soc);
             c.start();
         }
         System.out.println("Server signing Off");
-        ss.close();
     }
 }
-
-
-class Conversation extends Thread {
-    Socket soc;
-    public Conversation(Socket soc) {
-        this.soc = soc;
+class MessageQueue<T> {
+    ArrayList<T> al = new ArrayList<>();
+    synchronized public void enqueue(T i) {
+        al.add(i);
+        notify();
+    }
+    synchronized public T dequeue() {
+        if (al.isEmpty()) {
+            try {
+                wait();
+            } catch (Exception ex) {
+            }
+        }
+        return al.remove(0);
+    }
+    synchronized public void print() {
+        for (T i : al) {
+            System.out.println("-->" + i);
+        }
     }
     @Override
-    public void run() {
-        System.out.println("Conversation thread  " +
-                Thread.currentThread().getName() +
-                "   signing On"
-        );
-        try {
-            BufferedReader nis = new BufferedReader(
-                    new InputStreamReader(
-                            soc.getInputStream()
-                    )
-            );
-            PrintWriter nos = new PrintWriter(
-                    new BufferedWriter(
-                            new OutputStreamWriter(
-                                    soc.getOutputStream()
-                            )
-                    ), true
-            );
-            Server.al.add(nos);
-            String str = nis.readLine();
-            while (!str.equals("End")) {
-                System.out.println("Server Recieved  " + str);
-                for (PrintWriter o : Server.al) {
-                    o.println(str);
-                }
-                str = nis.readLine();
-            }
-            nos.println("End");
+    synchronized public String toString() {
+        String str = null;
+        for (T s : al) {
+            str += "::" + s;
         }
-        catch (Exception e) {
-            System.out.println(
-                    "Client Seems to have abruptly closed the connection"
-            );
-        }
-        System.out.println("Conversation thread  " +
-                Thread.currentThread().getName() +
-                "   signing Off"
-        );
+        return str;
     }
 }
