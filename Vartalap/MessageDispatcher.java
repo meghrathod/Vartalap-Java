@@ -1,3 +1,4 @@
+package Vartalap;
 import java.io.PrintWriter;
 
 public class MessageDispatcher extends Thread {
@@ -5,9 +6,9 @@ public class MessageDispatcher extends Thread {
     public void run() {
         while (true) {
             try {
-                String str = Server.q.dequeue();
+                userMessage msg = Server.q.dequeue();
                 for (PrintWriter o : Server.noslist) {
-                    o.println(str);
+                    o.println("<b>" + msg.username + ": </b>" + msg.message + "<br>");
                 }
             } catch (Exception e) {
             }
